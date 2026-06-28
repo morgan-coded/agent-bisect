@@ -8,6 +8,7 @@ from .eval import evaluate_paths, write_eval_reports
 from .foreign import fetch_openhands_realtask_trajectories, fetch_swe_agent_trajectories, ingest_foreign_trajectory, sweep_foreign_trajectories
 from .gates import g1_schema, run_g2, run_g3
 from .ingest_claude import ingest_transcript
+from .ingest_codex import codex_coverage_report, ingest_codex_transcript, render_codex_coverage_markdown
 from .io import load_activities
 from .localize import localize_failures
 from .model import Journal
@@ -22,6 +23,10 @@ def main(argv: list[str] | None = None) -> int:
     ingest_parser = subparsers.add_parser("ingest", help="ingest a Claude transcript into a journal")
     ingest_parser.add_argument("transcript", type=Path)
     ingest_parser.add_argument("--out", type=Path, help="output journal path")
+
+    ingest_codex_parser = subparsers.add_parser("ingest-codex", help="ingest a Codex transcript into a journal")
+    ingest_codex_parser.add_argument("transcript", type=Path)
+    ingest_codex_parser.add_argument("--out", type=Path, help="output journal path")
 
     ingest_foreign_parser = subparsers.add_parser("ingest-foreign", help="ingest a foreign trajectory into a journal")
     ingest_foreign_parser.add_argument("--schema", required=True, choices=["swe-agent", "mini-swe-agent", "openhands"])
@@ -55,6 +60,10 @@ def main(argv: list[str] | None = None) -> int:
     sweep_foreign_parser.add_argument("--reports-dir", type=Path, default=Path("reports"))
     sweep_foreign_parser.add_argument("--report-stem", default="foreign-coverage-report")
 
+    coverage_codex_parser = subparsers.add_parser("coverage-codex", help="summarize Codex transcript ingest coverage")
+    coverage_codex_parser.add_argument("paths", nargs="+", type=Path)
+    coverage_codex_parser.add_argument("--out", type=Path, help="optional markdown report path")
+
     fetch_foreign_parser = subparsers.add_parser("fetch-swe-agent-trajectories", help="fetch public SWE-agent .traj files")
     fetch_foreign_parser.add_argument("--out-dir", type=Path, default=Path("data/foreign-trajectories"))
     fetch_foreign_parser.add_argument("--limit", type=int)
@@ -67,6 +76,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "ingest":
         return _cmd_ingest(args.transcript, args.out)
+    if args.command == "ingest-codex":
+        return _cmd_ingest_codex(args.transcript, args.out)
     if args.command == "show":
         return _cmd_show(args.path, args.gates)
     if args.command == "localize":
@@ -85,12 +96,23 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_fetch_openhands_realtask_trajectories(args.out_dir, args.limit, args.page_size)
     if args.command == "sweep-foreign":
         return _cmd_sweep_foreign(args.schema, args.paths, args.reports_dir, args.report_stem)
+    if args.command == "coverage-codex":
+        return _cmd_coverage_codex(args.paths, args.out)
     parser.error("unknown command")
     return 2
 
 
 def _cmd_ingest(transcript: Path, out: Path | None) -> int:
     activities = ingest_transcript(transcript)
+    journal = Journal.from_activities(activities)
+    out_path = out or transcript.with_suffix(".journal.jsonl")
+    journal.write_jsonl(out_path)
+    print(f"wrote {len(journal.records)} activities to {out_path}")
+    return 0
+
+
+def _cmd_ingest_codex(transcript: Path, out: Path | None) -> int:
+    activities = ingest_codex_transcript(transcript)
     journal = Journal.from_activities(activities)
     out_path = out or transcript.with_suffix(".journal.jsonl")
     journal.write_jsonl(out_path)
@@ -242,6 +264,17 @@ def _cmd_sweep_foreign(schema: str, paths: list[Path], reports_dir: Path, report
             total=gaps["action_activity_count"],
         )
     )
+    return 0
+
+
+def _cmd_coverage_codex(paths: list[Path], out: Path | None) -> int:
+    report = codex_coverage_report(paths)
+    rendered = render_codex_coverage_markdown(report)
+    if out is not None:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(rendered, encoding="utf-8", newline="\n")
+        print(f"wrote {out}")
+    print(rendered, end="")
     return 0
 
 
