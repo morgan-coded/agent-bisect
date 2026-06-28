@@ -1,0 +1,111 @@
+{
+  "dataset": "nebius/SWE-rebench-openhands-trajectories",
+  "dataset_commit": "test-sha",
+  "row": {
+    "exit_status": "submit",
+    "instance_id": "example__repo-1",
+    "repo": "example/repo",
+    "resolved": 1,
+    "trajectory": [
+      {
+        "content": "system prompt",
+        "role": "system",
+        "tool_calls": null
+      },
+      {
+        "content": "Fix the issue.",
+        "role": "user",
+        "tool_calls": null
+      },
+      {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+          {
+            "function": {
+              "arguments": "{\"command\":\"view\",\"path\":\"/workspace/example/repo.py\"}",
+              "name": "str_replace_editor"
+            },
+            "id": "call-view",
+            "type": "function"
+          }
+        ]
+      },
+      {
+        "content": "file contents",
+        "name": "str_replace_editor",
+        "role": "tool",
+        "tool_call_id": "call-view",
+        "tool_calls": null
+      },
+      {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+          {
+            "function": {
+              "arguments": "{\"command\":\"create\",\"path\":\"/workspace/example/new_test.py\",\"file_text\":\"def test_ok():\\n    assert True\\n\"}",
+              "name": "str_replace_editor"
+            },
+            "id": "call-create",
+            "type": "function"
+          }
+        ]
+      },
+      {
+        "content": "created",
+        "name": "str_replace_editor",
+        "role": "tool",
+        "tool_call_id": "call-create",
+        "tool_calls": null
+      },
+      {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+          {
+            "function": {
+              "arguments": "{\"command\":\"str_replace\",\"path\":\"/workspace/example/new_test.py\",\"old_str\":\"assert True\",\"new_str\":\"assert 1 == 1\"}",
+              "name": "str_replace_editor"
+            },
+            "id": "call-edit",
+            "type": "function"
+          }
+        ]
+      },
+      {
+        "content": "edited",
+        "name": "str_replace_editor",
+        "role": "tool",
+        "tool_call_id": "call-edit",
+        "tool_calls": null
+      },
+      {
+        "content": "",
+        "role": "assistant",
+        "tool_calls": [
+          {
+            "function": {
+              "arguments": "{\"command\":\"pytest -q\"}",
+              "name": "execute_bash"
+            },
+            "id": "call-test",
+            "type": "function"
+          }
+        ]
+      },
+      {
+        "content": "1 passed",
+        "name": "execute_bash",
+        "role": "tool",
+        "tool_call_id": "call-test",
+        "tool_calls": null
+      }
+    ],
+    "trajectory_id": "traj-1"
+  },
+  "row_idx": 7,
+  "schema": "openhands",
+  "schema_version": 1,
+  "split": "train"
+}

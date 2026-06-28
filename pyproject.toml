@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-bisect"
+version = "0.1.0"
+description = "Git-bisect-style localization for deterministic failures in agent-run transcripts."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+agent-bisect = "agent_bisect.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["agent_bisect*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
