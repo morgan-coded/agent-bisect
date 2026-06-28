@@ -1,6 +1,6 @@
 from agent_bisect.cli import main
 from agent_bisect.ingest_claude import ingest_transcript
-from agent_bisect.localize import localize_failures
+from agent_bisect.localize import localize_failures, shell_target_coverage
 from agent_bisect.model import Activity, Journal
 
 
@@ -90,6 +90,67 @@ def test_localization_is_deterministic_for_same_journal(localize_planted_fault_p
     assert first == second
 
 
+def test_shell_target_fixture_links_writer_to_later_failure(shell_target_coverage_path):
+    activities = ingest_transcript(shell_target_coverage_path)
+
+    report = localize_failures(activities)
+
+    assert report.status == "break"
+    assert len(report.failures) == 1
+    failure = report.failures[0]
+    assert failure.breaking_step == 0
+    assert failure.failure_cascade == (1,)
+    assert failure.confidence == "LOW"
+    assert "heuristic shell-target edge" in failure.coverage
+    assert failure.candidates == (0, 1)
+
+    coverage = shell_target_coverage(activities)
+    assert coverage.to_dict() == {
+        "shell_command_steps": 2,
+        "steps_with_targets": 2,
+        "added_edges": 1,
+    }
+
+
+def test_shell_target_localization_is_deterministic(shell_target_coverage_path):
+    activities = ingest_transcript(shell_target_coverage_path)
+
+    first = localize_failures(activities).to_dict()
+    second = localize_failures(activities).to_dict()
+
+    assert first == second
+
+
+def test_ambiguous_shell_target_does_not_create_false_consumer_link():
+    activities = [
+        _test_fail(
+            0,
+            parent_step=None,
+            command="cat $LOG | grep x > repo/out.txt",
+        ),
+        _test_fail(
+            1,
+            parent_step=None,
+            command="pytest repo/out.txt",
+        ),
+    ]
+
+    report = localize_failures(activities)
+
+    assert report.status == "break"
+    assert [failure.breaking_step for failure in report.failures] == [0, 1]
+    assert all(failure.failure_cascade == () for failure in report.failures)
+    assert not any(
+        failure.breaking_step == 0 and failure.failure_cascade == (1,) and failure.confidence == "HIGH"
+        for failure in report.failures
+    )
+    assert shell_target_coverage(activities).to_dict() == {
+        "shell_command_steps": 2,
+        "steps_with_targets": 1,
+        "added_edges": 0,
+    }
+
+
 def test_localize_cli_prints_structural_sample_only(localize_planted_fault_path, capsys):
     assert main(["localize", str(localize_planted_fault_path)]) == 0
     output = capsys.readouterr().out
@@ -144,8 +205,13 @@ def _opaque(step_index: int, parent_step: int | None) -> Activity:
     )
 
 
-def _test_fail(step_index: int, parent_step: int | None, file_path: str | None = None) -> Activity:
-    inputs = {"command": "python -m pytest"}
+def _test_fail(
+    step_index: int,
+    parent_step: int | None,
+    file_path: str | None = None,
+    command: str = "python -m pytest",
+) -> Activity:
+    inputs = {"command": command}
     if file_path is not None:
         inputs["file_path"] = file_path
     return Activity(

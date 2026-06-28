@@ -16,3 +16,8 @@ def slice2_fixture_path() -> Path:
 @pytest.fixture
 def localize_planted_fault_path() -> Path:
     return Path(__file__).parent / "fixtures" / "localize_planted_fault.jsonl"
+
+
+@pytest.fixture
+def shell_target_coverage_path() -> Path:
+    return Path(__file__).parent / "fixtures" / "shell_target_coverage.jsonl"

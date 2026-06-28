@@ -4,7 +4,7 @@ from collections import Counter
 from typing import Iterable
 
 from .gates import GateResult, run_g1, run_g2, run_g3
-from .localize import localize_failures
+from .localize import localize_failures, shell_target_coverage
 from .model import Activity
 
 
@@ -25,6 +25,7 @@ def explain_replay(activities: Iterable[Activity]) -> str:
         "G3": run_g3(ordered),
     }
     localization = localize_failures(ordered)
+    shell_coverage = shell_target_coverage(ordered)
 
     lines = [
         "agent-bisect replay --explain",
@@ -32,6 +33,11 @@ def explain_replay(activities: Iterable[Activity]) -> str:
         f"activities: {len(ordered)}",
         f"kinds: {_format_counts(kind_counts)}",
         f"structured_fraction: {_format_fraction(structured_count, len(ordered))}",
+        "shell_target_coverage: steps_with_targets={hits}/{total} added_edges={edges}".format(
+            hits=shell_coverage.steps_with_targets,
+            total=shell_coverage.shell_command_steps,
+            edges=shell_coverage.added_edges,
+        ),
         "gate_tallies:",
     ]
     for gate in ("G1", "G2", "G3"):
