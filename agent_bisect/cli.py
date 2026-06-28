@@ -15,6 +15,7 @@ from .localize import localize_failures
 from .model import Journal
 from .replay import explain_replay
 from .scan import scan_paths
+from .study import StudyInput, run_corpus_study, write_study_reports
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -82,6 +83,20 @@ def main(argv: list[str] | None = None) -> int:
     benchmark_parser.add_argument("--limit-per-config", type=int, help="dev-only limit for smoke tests")
     benchmark_parser.add_argument("--page-size", type=int, default=100)
 
+    study_parser = subparsers.add_parser("corpus-study", help="run aggregate-only corpus coverage study")
+    study_parser.add_argument("--claude", action="append", type=Path, default=[], help="Claude transcript file or directory")
+    study_parser.add_argument("--codex", action="append", type=Path, default=[], help="Codex transcript file or directory")
+    study_parser.add_argument(
+        "--foreign",
+        action="append",
+        nargs=2,
+        metavar=("SCHEMA", "PATH"),
+        default=[],
+        help="foreign schema and fixture file/directory",
+    )
+    study_parser.add_argument("--reports-dir", type=Path, default=Path("reports"))
+    study_parser.add_argument("--study-md", type=Path, default=Path("STUDY.md"))
+
     args = parser.parse_args(argv)
     if args.command == "ingest":
         return _cmd_ingest(args.transcript, args.out)
@@ -116,6 +131,8 @@ def main(argv: list[str] | None = None) -> int:
             limit_per_config=args.limit_per_config,
             page_size=args.page_size,
         )
+    if args.command == "corpus-study":
+        return _cmd_corpus_study(args.claude, args.codex, args.foreign, args.reports_dir, args.study_md)
     parser.error("unknown command")
     return 2
 
@@ -335,6 +352,42 @@ def _cmd_benchmark_who_when(
             gaps=summary["coverage_gap_count"],
             denom=summary["included_label_count"],
             rate=_format_rate(summary["coverage_gap_rate"]),
+        )
+    )
+    return 0
+
+
+def _cmd_corpus_study(
+    claude_paths: list[Path],
+    codex_paths: list[Path],
+    foreign_specs: list[list[str]],
+    reports_dir: Path,
+    study_md: Path,
+) -> int:
+    inputs = [StudyInput("claude", path) for path in claude_paths]
+    inputs.extend(StudyInput("codex", path) for path in codex_paths)
+    for schema, raw_path in foreign_specs:
+        inputs.append(StudyInput("foreign", Path(raw_path), schema=schema))
+    report = run_corpus_study(inputs)
+    write_study_reports(report, reports_dir, study_md)
+    summary = report["summary"]
+    print(f"wrote {reports_dir / 'corpus-study.json'}")
+    print(f"wrote {study_md}")
+    print(f"runs\t{summary['parsed_runs']}/{summary['runs_considered']}")
+    print(f"records\t{summary['source_records']}")
+    print(f"activities\t{summary['activities']}")
+    print(
+        "localization\tno_break={no_break} HIGH={high} LOW={low}".format(
+            no_break=summary["localization_runs"]["no_break"],
+            high=summary["localization_runs"]["HIGH"],
+            low=summary["localization_runs"]["LOW"],
+        )
+    )
+    print(
+        "gate_break_runs\t{breaks}/{runs} ({rate})".format(
+            breaks=summary["gate_failure_runs"],
+            runs=summary["parsed_runs"],
+            rate=_format_rate(None if summary["parsed_runs"] == 0 else summary["gate_failure_runs"] / summary["parsed_runs"]),
         )
     )
     return 0

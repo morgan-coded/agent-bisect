@@ -29,6 +29,8 @@ The Who&When benchmark fetches public rows into ignored local `data/`, scores on
 agent-bisect benchmark-who-when --fetch
 ```
 
+The `corpus-study` command reads caller-supplied transcript roots read-only and emits aggregate-only coverage rates.
+
 ## What It Checks
 
 - G1 validates that normalized activities have the required structural fields.
@@ -61,10 +63,11 @@ Runtime code uses only the Python standard library. The development extra instal
 - `fetch-swe-agent-trajectories`
 - `fetch-openhands-realtask-trajectories`
 - `benchmark-who-when`
+- `corpus-study`
 
 ## Test
 
 ```powershell
-python -m pytest -q
+pytest -q
 ```
 
