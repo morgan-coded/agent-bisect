@@ -23,6 +23,12 @@ agent-bisect ingest-foreign --schema swe-agent tests/fixtures/swe_agent_function
 agent-bisect sweep-foreign --schema mini-swe-agent tests/fixtures/mini-swe-agent-github-issue.traj.json
 ```
 
+The Who&When benchmark fetches public rows into ignored local `data/`, scores only aggregate structural fields, and writes the ship artifact to `BENCHMARK.md`:
+
+```powershell
+agent-bisect benchmark-who-when --fetch
+```
+
 ## What It Checks
 
 - G1 validates that normalized activities have the required structural fields.
@@ -54,6 +60,7 @@ Runtime code uses only the Python standard library. The development extra instal
 - `sweep-foreign`
 - `fetch-swe-agent-trajectories`
 - `fetch-openhands-realtask-trajectories`
+- `benchmark-who-when`
 
 ## Test
 

@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 import sys
 
+from .benchmark import fetch_who_when_dataset, load_who_when_cases, score_who_when_cases, write_who_when_reports
 from .eval import evaluate_paths, write_eval_reports
 from .foreign import fetch_openhands_realtask_trajectories, fetch_swe_agent_trajectories, ingest_foreign_trajectory, sweep_foreign_trajectories
 from .gates import g1_schema, run_g2, run_g3
@@ -73,6 +74,14 @@ def main(argv: list[str] | None = None) -> int:
     fetch_openhands_parser.add_argument("--limit", type=int, default=50)
     fetch_openhands_parser.add_argument("--page-size", type=int, default=100)
 
+    benchmark_parser = subparsers.add_parser("benchmark-who-when", help="score against the public Who&When labels")
+    benchmark_parser.add_argument("--data-dir", type=Path, default=Path("data/who-when"))
+    benchmark_parser.add_argument("--reports-dir", type=Path, default=Path("reports"))
+    benchmark_parser.add_argument("--benchmark-md", type=Path, default=Path("BENCHMARK.md"))
+    benchmark_parser.add_argument("--fetch", action="store_true", help="fetch rows from Hugging Face before scoring")
+    benchmark_parser.add_argument("--limit-per-config", type=int, help="dev-only limit for smoke tests")
+    benchmark_parser.add_argument("--page-size", type=int, default=100)
+
     args = parser.parse_args(argv)
     if args.command == "ingest":
         return _cmd_ingest(args.transcript, args.out)
@@ -98,6 +107,15 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_sweep_foreign(args.schema, args.paths, args.reports_dir, args.report_stem)
     if args.command == "coverage-codex":
         return _cmd_coverage_codex(args.paths, args.out)
+    if args.command == "benchmark-who-when":
+        return _cmd_benchmark_who_when(
+            args.data_dir,
+            args.reports_dir,
+            args.benchmark_md,
+            fetch=args.fetch,
+            limit_per_config=args.limit_per_config,
+            page_size=args.page_size,
+        )
     parser.error("unknown command")
     return 2
 
@@ -275,6 +293,50 @@ def _cmd_coverage_codex(paths: list[Path], out: Path | None) -> int:
         out.write_text(rendered, encoding="utf-8", newline="\n")
         print(f"wrote {out}")
     print(rendered, end="")
+    return 0
+
+
+def _cmd_benchmark_who_when(
+    data_dir: Path,
+    reports_dir: Path,
+    benchmark_md: Path,
+    *,
+    fetch: bool,
+    limit_per_config: int | None,
+    page_size: int,
+) -> int:
+    manifest_path = data_dir / "manifest.json"
+    if fetch or not manifest_path.exists():
+        fetch_who_when_dataset(data_dir, limit_per_config=limit_per_config, page_size=page_size)
+    cases, manifest = load_who_when_cases(data_dir)
+    report = score_who_when_cases(cases, manifest)
+    write_who_when_reports(report, reports_dir, benchmark_md)
+    summary = report["summary"]
+    print(f"wrote {reports_dir / 'who-when-benchmark.json'}")
+    print(f"wrote {benchmark_md}")
+    print(f"dataset_revision\t{report['dataset']['revision']}")
+    print(f"labels\t{summary['included_label_count']}")
+    print(
+        "exact_step\t{correct}/{denom} ({rate})".format(
+            correct=summary["exact_step_correct"],
+            denom=summary["included_label_count"],
+            rate=_format_rate(summary["exact_step_accuracy"]),
+        )
+    )
+    print(
+        "confidence\tHIGH={high} LOW={low} NA={na}".format(
+            high=summary["confidence"]["HIGH"]["total"],
+            low=summary["confidence"]["LOW"]["total"],
+            na=summary["confidence"]["NA"]["total"],
+        )
+    )
+    print(
+        "coverage_gaps\t{gaps}/{denom} ({rate})".format(
+            gaps=summary["coverage_gap_count"],
+            denom=summary["included_label_count"],
+            rate=_format_rate(summary["coverage_gap_rate"]),
+        )
+    )
     return 0
 
 
