@@ -4,6 +4,8 @@
 
 This is a controlled injected-fault result over real ingested agent transcripts. It is a positive deterministic-envelope localization number, not a real-world attribution claim.
 
+**Read the headline with the class mix in mind:** 87% of target injections (1000/1151) are the trivially-localizable `G1` schema class; only 90 are `G2` and 61 `G3`. So `0.943` is a G1-weighted average. Per class it is **G1 93.4% / G2 100% / G3 100%** (see the Confusion Matrix) — the realistic-fault classes (G2/G3) are perfect but small-n, and the overall number is dominated by the easiest class.
+
 | metric | result |
 | --- | ---: |
 | controlled exact-step accuracy | 1085/1151 (0.943) |
@@ -59,6 +61,8 @@ Runs considered: 6741; clean: 6626; dirty/excluded: 115.
 ## Honest Two-Sided Result
 
 The positive number above is controlled: target failures are injected into clean real ingested runs, so the breaking step is known by construction. It should be read as deterministic-envelope localization under known structured mutations.
+
+The coverage companion is `STUDY.md`: across 6,735 real runs, only ~1.7% expose a deterministic gate-visible break at all. So this accuracy is measured on that thin gate-detectable slice — it says "when a break is visible to the gates, here is how precisely it is localized," not "agent-bisect localizes agent failures broadly." The three documents together are the honest picture: coverage (~1.7%, STUDY.md), accuracy on the covered slice (this), and the semantic boundary (0%, BENCHMARK.md).
 
 The boundary companion remains `BENCHMARK.md`: Who&When exact-step `0/181`, cascade `0/181`, coverage gaps `181/181` over 181 included labels. That benchmark is semantic multi-agent failure attribution over natural-language histories, so the 0% result is a visibility boundary, not a contradiction.
 
