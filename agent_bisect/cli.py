@@ -21,6 +21,7 @@ from .ingest_codex import codex_coverage_report, ingest_codex_transcript, render
 from .io import load_activities
 from .localize import localize_failures
 from .model import Journal
+from .oracle import load_pattern_set, render_cli_report, run_regex_oracle
 from .replay import explain_replay
 from .scan import scan_paths
 from .study import StudyInput, run_corpus_study, write_study_reports
@@ -113,6 +114,12 @@ def main(argv: list[str] | None = None) -> int:
     accuracy_parser.add_argument("--reports-dir", type=Path, default=Path("reports"))
     accuracy_parser.add_argument("--accuracy-md", type=Path, default=Path("ACCURACY.md"))
 
+    regex_oracle_parser = subparsers.add_parser("regex-oracle", help="run deterministic regex differential oracle")
+    regex_oracle_parser.add_argument("pattern_set", type=Path)
+    regex_oracle_parser.add_argument("--reference-mode", choices=["search", "fullmatch"], default="search")
+    regex_oracle_parser.add_argument("--candidate-mode", choices=["search", "fullmatch"], default="fullmatch")
+    regex_oracle_parser.add_argument("--max-generated", type=int, default=24)
+
     args = parser.parse_args(argv)
     if args.command == "ingest":
         return _cmd_ingest(args.transcript, args.out)
@@ -151,6 +158,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_corpus_study(args.claude, args.codex, args.foreign, args.reports_dir, args.study_md)
     if args.command == "accuracy":
         return _cmd_accuracy(args.paths, args.seed, args.per_class, args.max_per_run, args.reports_dir, args.accuracy_md)
+    if args.command == "regex-oracle":
+        return _cmd_regex_oracle(args.pattern_set, args.reference_mode, args.candidate_mode, args.max_generated)
     parser.error("unknown command")
     return 2
 
@@ -451,6 +460,17 @@ def _cmd_accuracy(
         )
     )
     return 0
+
+
+def _cmd_regex_oracle(pattern_set: Path, reference_mode: str, candidate_mode: str, max_generated: int) -> int:
+    report = run_regex_oracle(
+        load_pattern_set(pattern_set),
+        reference_mode=reference_mode,
+        candidate_mode=candidate_mode,
+        max_generated=max_generated,
+    )
+    print(render_cli_report(report), end="")
+    return 1 if report.unsupported_pattern_count else 0
 
 
 def _safe_cell(value: str) -> str:

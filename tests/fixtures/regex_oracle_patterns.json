@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "patterns": [
+    {
+      "id": "planted-search-vs-fullmatch",
+      "pattern": "cat",
+      "inputs": ["cat", "concatenate", "dog"],
+      "description": "The candidate fullmatch configuration misses the substring match on input index 1."
+    },
+    {
+      "id": "anchored-agreement",
+      "pattern": "^cat$",
+      "inputs": ["cat", "concatenate", "dog"],
+      "description": "Anchored syntax agrees under search and fullmatch for this ordered input set."
+    }
+  ]
+}
