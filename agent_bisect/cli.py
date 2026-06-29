@@ -4,6 +4,14 @@ import argparse
 from pathlib import Path
 import sys
 
+from .accuracy import (
+    DEFAULT_MAX_PER_RUN,
+    DEFAULT_PER_CLASS,
+    DEFAULT_SEED,
+    build_activity_runs,
+    evaluate_controlled_accuracy,
+    write_accuracy_reports,
+)
 from .benchmark import fetch_who_when_dataset, load_who_when_cases, score_who_when_cases, write_who_when_reports
 from .eval import evaluate_paths, write_eval_reports
 from .foreign import fetch_openhands_realtask_trajectories, fetch_swe_agent_trajectories, ingest_foreign_trajectory, sweep_foreign_trajectories
@@ -97,6 +105,14 @@ def main(argv: list[str] | None = None) -> int:
     study_parser.add_argument("--reports-dir", type=Path, default=Path("reports"))
     study_parser.add_argument("--study-md", type=Path, default=Path("STUDY.md"))
 
+    accuracy_parser = subparsers.add_parser("accuracy", help="run controlled localization-accuracy campaign")
+    accuracy_parser.add_argument("paths", nargs="+", type=Path)
+    accuracy_parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    accuracy_parser.add_argument("--per-class", type=int, default=DEFAULT_PER_CLASS)
+    accuracy_parser.add_argument("--max-per-run", type=int, default=DEFAULT_MAX_PER_RUN)
+    accuracy_parser.add_argument("--reports-dir", type=Path, default=Path("reports"))
+    accuracy_parser.add_argument("--accuracy-md", type=Path, default=Path("ACCURACY.md"))
+
     args = parser.parse_args(argv)
     if args.command == "ingest":
         return _cmd_ingest(args.transcript, args.out)
@@ -133,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.command == "corpus-study":
         return _cmd_corpus_study(args.claude, args.codex, args.foreign, args.reports_dir, args.study_md)
+    if args.command == "accuracy":
+        return _cmd_accuracy(args.paths, args.seed, args.per_class, args.max_per_run, args.reports_dir, args.accuracy_md)
     parser.error("unknown command")
     return 2
 
@@ -388,6 +406,48 @@ def _cmd_corpus_study(
             breaks=summary["gate_failure_runs"],
             runs=summary["parsed_runs"],
             rate=_format_rate(None if summary["parsed_runs"] == 0 else summary["gate_failure_runs"] / summary["parsed_runs"]),
+        )
+    )
+    return 0
+
+
+def _cmd_accuracy(
+    paths: list[Path],
+    seed: int,
+    per_class: int,
+    max_per_run: int,
+    reports_dir: Path,
+    accuracy_md: Path,
+) -> int:
+    runs, load_report = build_activity_runs(paths)
+    report = evaluate_controlled_accuracy(runs, seed=seed, per_class=per_class, max_per_run=max_per_run)
+    report["load_report"] = load_report
+    write_accuracy_reports(report, reports_dir, accuracy_md)
+    headline = report["controlled_accuracy"]
+    print(f"wrote {reports_dir / 'accuracy-report.json'}")
+    print(f"wrote {accuracy_md}")
+    print(f"runs\t{report['source']['run_count']}")
+    print(f"clean_runs\t{report['source']['clean_runs']}")
+    print(f"dirty_runs\t{report['source']['excluded_dirty_runs']}")
+    print(
+        "exact_step\t{correct}/{denom} ({rate})".format(
+            correct=headline["exact_step_correct"],
+            denom=headline["target_injections"],
+            rate=_format_rate(headline["exact_step_accuracy"]),
+        )
+    )
+    print(
+        "cascade\t{correct}/{denom} ({rate})".format(
+            correct=headline["cascade_membership_correct"],
+            denom=headline["target_injections"],
+            rate=_format_rate(headline["cascade_membership_accuracy"]),
+        )
+    )
+    print(
+        "high_exact\t{correct}/{denom} ({rate})".format(
+            correct=headline["high_exact_step_correct"],
+            denom=headline["high_total"],
+            rate=_format_rate(headline["high_exact_step_accuracy"]),
         )
     )
     return 0
