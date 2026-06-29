@@ -1,6 +1,20 @@
 # agent-bisect
 
-`agent-bisect` is git bisect for agent runs: ingest an agent transcript, normalize its recorded actions, run deterministic gates (G1/G2/G3), localize the first visible breaking step, and report what the transcript does not expose.
+`agent-bisect` is git-bisect for agent runs: it deterministically localizes the first visible breaking step, and refuses to guess when it cannot see one.
+
+Demo: read the recorded transcript at [demo/DEMO-TRANSCRIPT.md](demo/DEMO-TRANSCRIPT.md), or run it yourself with `agent-bisect demo`.
+
+| win | result | source |
+| --- | ---: | --- |
+| exact-step localization on controlled visible breaks | 1085/1151 (94.3%) | [ACCURACY.md](ACCURACY.md) |
+| HIGH-confidence exact-step localization | 1083/1083 (100%) | [ACCURACY.md](ACCURACY.md) |
+| false positives on controlled negative probes | 0/1061 | [ACCURACY.md](ACCURACY.md) |
+| adapter surfaces | 4: Claude, Codex, foreign trajectories, Who&When boundary mapping | CLI + [BENCHMARK.md](BENCHMARK.md) |
+| replay discipline | deterministic-invariant suite + CI | [INVARIANTS.md](INVARIANTS.md) + tests |
+
+The corpus finding comes second: across 6,735 real runs, only 113 expose a deterministic gate-visible break (about 1.7% engage / 98.3% abstain). That is a visibility result, not a defect: most real transcripts do not expose a deterministic G1/G2/G3 break for this tool to localize. The `0/181` Who&When result is the same boundary in a semantic attribution setting: the right answer is to abstain rather than invent evidence.
+
+Class-mix caveat up front: the 94.3% headline is G1-weighted. Per class, the controlled exact-step result is G1 93.4%, G2 100%, G3 100%; G2/G3 are perfect but small-n.
 
 ## Honest Result
 
@@ -19,6 +33,12 @@ The short version: `agent-bisect` is precision-first on the slice it can inspect
 
 ```powershell
 pip install -e .
+agent-bisect demo
+```
+
+Manual commands:
+
+```powershell
 agent-bisect ingest tests/fixtures/claude_sanitized.jsonl --out demo.journal.jsonl
 agent-bisect localize demo.journal.jsonl
 agent-bisect replay demo.journal.jsonl --explain
@@ -49,6 +69,7 @@ For the caught-failure walkthrough, see [demo/WALKTHROUGH.md](demo/WALKTHROUGH.m
 - `ingest`: convert a Claude transcript into a normalized journal.
 - `ingest-codex`: convert a Codex transcript into a normalized journal.
 - `ingest-foreign`: convert SWE-agent, mini-swe-agent, or OpenHands fixtures.
+- `demo`: run the packaged replayable demo: HIGH-confidence localization first, clean-control abstention second.
 - `show`: print a structural timeline, optionally with gate verdicts.
 - `localize`: report deterministic gate failures and their first visible breaking step.
 - `replay`: render the structural explain view.

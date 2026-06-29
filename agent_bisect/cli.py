@@ -13,6 +13,7 @@ from .accuracy import (
     write_accuracy_reports,
 )
 from .benchmark import fetch_who_when_dataset, load_who_when_cases, score_who_when_cases, write_who_when_reports
+from .demo import run_packaging_demo
 from .eval import evaluate_paths, write_eval_reports
 from .foreign import fetch_openhands_realtask_trajectories, fetch_swe_agent_trajectories, ingest_foreign_trajectory, sweep_foreign_trajectories
 from .gates import g1_schema, run_g2, run_g3
@@ -30,6 +31,9 @@ from .study import StudyInput, run_corpus_study, write_study_reports
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="agent-bisect")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    demo_parser = subparsers.add_parser("demo", help="run the packaged deterministic demo")
+    demo_parser.add_argument("--paced", action="store_true", help="slow command reveals for terminal recording")
 
     ingest_parser = subparsers.add_parser("ingest", help="ingest a Claude transcript into a journal")
     ingest_parser.add_argument("transcript", type=Path)
@@ -121,6 +125,8 @@ def main(argv: list[str] | None = None) -> int:
     regex_oracle_parser.add_argument("--max-generated", type=int, default=24)
 
     args = parser.parse_args(argv)
+    if args.command == "demo":
+        return run_packaging_demo(paced=args.paced)
     if args.command == "ingest":
         return _cmd_ingest(args.transcript, args.out)
     if args.command == "ingest-codex":

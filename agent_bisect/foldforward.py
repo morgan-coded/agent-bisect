@@ -12,7 +12,7 @@ class FoldForwardState:
     """Reconstruct only journal-provided file contents for deterministic G2 checks.
 
     G2 verifies the deterministic envelope of recorded edits. It never reads the
-    live on-disk file, because the tree may have drifted and may contain secrets.
+    live on-disk file, because the tree may have drifted and may contain sensitive data.
     Without a prior Write/full-content anchor in the same run, Edit fragments are
     intentionally reported as NA rather than guessed.
     """

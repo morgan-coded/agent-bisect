@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 reports/
 data/
+demo/_replay/
 m-progress/
 *.journal.jsonl
 _smoke.jsonl

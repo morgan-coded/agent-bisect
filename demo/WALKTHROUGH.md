@@ -2,6 +2,16 @@
 
 This walkthrough uses shipped sanitized fixtures. The examples are constructed, not taken from a local real transcript, so they are reproducible and contain only neutral `repo/...` paths and structural summaries.
 
+## Packaged Replayable Demo
+
+Run the complete demo:
+
+```powershell
+agent-bisect demo
+```
+
+It shows the HIGH-confidence break first, then a clean-control abstention. The recorded transcript is [DEMO-TRANSCRIPT.md](DEMO-TRANSCRIPT.md).
+
 ## Caught Failure: HIGH Confidence
 
 The fixture `tests/fixtures/localize_planted_fault.jsonl` represents a short run with a user step, a clean write, a bad edit, and a recorded failing test. The bad edit has a stale full-content anchor, so G2 catches the breaking step; the recorded test failure becomes the downstream cascade.
