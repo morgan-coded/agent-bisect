@@ -1,3 +1,5 @@
+> ▶ Watch the ~90s demo: https://asciinema.org/a/nv6BvyrscFO6s7kv  ·  replay locally: asciinema play demo/agent-bisect-demo.cast
+
 # agent-bisect
 
 `agent-bisect` is git-bisect for agent runs: it deterministically localizes the first visible breaking step, and refuses to guess when it cannot see one.
