@@ -211,18 +211,18 @@ def _accumulate_run(aggregate: dict[str, Any], activities: list[Activity], sourc
 
     gate_results = [*run_g1(activities), *run_g2(activities), *run_g3(activities)]
     failure_steps: set[int] = set()
-    run_has_failure = False
     for result in gate_results:
         aggregate["gate_status_counts"][f"{result.gate}:{result.status}"] += 1
         if result.status == "FAIL" and result.step_index is not None:
-            run_has_failure = True
             failure_steps.add(result.step_index)
             aggregate["gate_failures_by_gate"][result.gate] += 1
-    if run_has_failure:
-        aggregate["gate_failure_runs"] += 1
     aggregate["gate_failure_steps"] += len(failure_steps)
 
     localization = localize_failures(activities)
+    if localization.status == "break":
+        aggregate["gate_failure_runs"] += 1
+    # A parsed run with zero normalized activities is conservatively counted as
+    # no_break: the transcript exposed no deterministic gate-visible failure.
     if localization.status == "no_break":
         aggregate["localization_runs"]["no_break"] += 1
     else:
@@ -306,7 +306,7 @@ def _load_input_activities(source: str, path: Path, schema: str) -> list[Activit
 
 def _expand_jsonl(path: Path) -> list[Path]:
     if path.is_dir():
-        return sorted(candidate for candidate in path.rglob("*.jsonl") if candidate.is_file())
+        return sorted(set(candidate for candidate in path.rglob("*.jsonl") if candidate.is_file()))
     if path.is_file() and path.suffix == ".jsonl":
         return [path]
     return []

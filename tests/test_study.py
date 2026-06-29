@@ -29,6 +29,34 @@ def test_corpus_study_fixture_aggregates_have_denominators():
     assert report["by_source"]["foreign"]["parsed_runs"] == 1
 
 
+def test_corpus_study_break_run_count_matches_localization_status():
+    report = run_corpus_study(
+        [
+            StudyInput("claude", FIXTURES / "localize_planted_fault.jsonl"),
+            StudyInput("claude", FIXTURES / "shell_target_coverage.jsonl"),
+            StudyInput("claude", FIXTURES / "slice2_sanitized.jsonl"),
+        ]
+    )
+
+    summary = report["summary"]
+    localized_break_runs = summary["localization_runs"]["HIGH"] + summary["localization_runs"]["LOW"]
+    assert summary["gate_failure_runs"] == localized_break_runs
+    assert summary["localization_runs"]["no_break"] == 1
+
+
+def test_corpus_study_empty_parsed_run_counts_as_no_break(tmp_path):
+    empty_transcript = tmp_path / "empty.jsonl"
+    empty_transcript.write_text("", encoding="utf-8")
+
+    report = run_corpus_study([StudyInput("claude", empty_transcript)])
+    summary = report["summary"]
+
+    assert summary["parsed_runs"] == 1
+    assert summary["activities"] == 0
+    assert summary["gate_failure_runs"] == 0
+    assert summary["localization_runs"]["no_break"] == 1
+
+
 def test_corpus_study_report_is_aggregate_only(tmp_path):
     report = run_corpus_study(
         [
