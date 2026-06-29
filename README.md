@@ -1,4 +1,6 @@
-> ▶ Watch the ~90s demo: https://asciinema.org/a/nv6BvyrscFO6s7kv  ·  replay locally: asciinema play demo/agent-bisect-demo.cast
+![agent-bisect demo](demo/agent-bisect-demo.gif)
+
+> ▶ Interactive version: https://asciinema.org/a/nv6BvyrscFO6s7kv  ·  replay locally: asciinema play demo/agent-bisect-demo.cast
 
 # agent-bisect
 
